@@ -2,37 +2,55 @@ import cv2
 import pickle
 from protocol import Protocol  # Assuming you have a custom Protocol class
 
-# Create a Protocol object
-socket = Protocol()
-socket.bind(("127.0.0.1", 8080))
-socket.listen()
-c_s, _ = socket.accept()
 
-# Open a connection to the default camera (index 0)
-vid = cv2.VideoCapture(0)
+class Server:
+    def __init__(self):
+        # Create a Protocol object
+        self.socket = Protocol()
+        self.socket.bind(("0.0.0.0", 8080))
+        self.socket.listen()
+        self.c_s, _ = self.socket.accept()
 
-while True:
-    # Capture the video frame
-    ret, frame = vid.read()
 
-    # Serialize the frame using pickle
-    serialized_frame = pickle.dumps(frame)
+        # Open a connection to the default camera (index 0)
+        print("a")
+        self.vid = cv2.VideoCapture(0)
+        print("b")
 
-    # Send the serialized frame
-    c_s.send_msg(serialized_frame)
+    def run(self):
+        while True:
+            # Capture the video frame
+            ret, frame = self.vid.read()
 
-    # Display the frame
-    cv2.imshow('frame', frame)
+            # Serialize the frame using pickle
+            serialized_frame = pickle.dumps(frame)
 
-    # Check for the 'q' key to quit
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+            # Send the serialized frame
+            self.c_s.send_msg(serialized_frame)
 
-# Release the video capture object
-vid.release()
+            # Display the frame
+            #cv2.imshow('frame', frame)
 
-# Destroy all OpenCV windows
-cv2.destroyAllWindows()
+            # Check for the 'q' key to quit
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-# Close the socket
-c_s.close()
+    def relese(self):
+        # Release the video capture object
+        self.vid.release()
+
+    def close(self):
+
+
+        # Close the socket
+        self.c_s.close()
+
+
+def main():
+        ser = Server()
+        ser.run()
+        cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    main()
