@@ -1,28 +1,34 @@
-import socket
-import sounddevice as sd
-import numpy as np
+import socket, cv2, pickle, struct, time
+import pyshine as ps
 
-# Client configuration
-HOST = '127.0.0.1'  # Change to the server's IP address
-PORT = 12345
+mode = 'send'
+name = 'SERVER TRANSMITTING AUDIO'
+audio, context = ps.audioCapture(mode=mode)
+# ps.showPlot(context,name)
 
-# Audio configuration
-channels = 1
-sample_rate = 44100
-dtype = np.int16
+# Socket Create
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+host_ip = '192.168.1.105'
+port = 4982
+backlog = 5
+socket_address = (host_ip, port)
+print('STARTING SERVER AT', socket_address, '...')
+server_socket.bind(socket_address)
+server_socket.listen(backlog)
 
-def send_audio():
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
-        try:
-            with sd.InputStream(channels=channels, samplerate=sample_rate, dtype=dtype) as stream:
-                print("Client is sending audio to {}:{}".format(HOST, PORT))
-                while True:
-                    audio_chunk, overflowed = stream.read(1024)  # Adjust buffer size as needed
-                    data = audio_chunk.tobytes()
-                    client_socket.sendto(data, (HOST, PORT))
-        except Exception as e:
-            print("Error:", e)
+while True:
+    client_socket, addr = server_socket.accept()
+    print('GOT CONNECTION FROM:', addr)
+    if client_socket:
 
+        while (True):
+            frame = audio.get()
 
-if __name__ == "__main__":
-    send_audio()
+            a = pickle.dumps(frame)
+            message = struct.pack("Q", len(a)) + a
+            client_socket.sendall(message)
+
+    else:
+        break
+
+client_socket.close()		

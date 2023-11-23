@@ -1,29 +1,35 @@
-import socket
-import sounddevice as sd
-import numpy as np
+import socket, cv2, pickle, struct
+import pyshine as ps
 
-# Server configuration
-HOST = '0.0.0.0'
-PORT = 12345
+mode = 'get'
+name = 'CLIENT RECEIVING AUDIO'
+audio, context = ps.audioCapture(mode=mode)
+ps.showPlot(context, name)
 
-# Audio configuration
-channels = 1
-sample_rate = 44100
-dtype = np.int16
+# create socket
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+host_ip = '192.168.1.105'
+port = 4982
 
+socket_address = (host_ip, port)
+client_socket.connect(socket_address)
+print("CLIENT CONNECTED TO", socket_address)
+data = b""
+payload_size = struct.calcsize("Q")
+while True:
+    while len(data) < payload_size:
+        packet = client_socket.recv(4 * 1024)  # 4K
+        if not packet: break
+        data += packet
+    packed_msg_size = data[:payload_size]
+    data = data[payload_size:]
+    msg_size = struct.unpack("Q", packed_msg_size)[0]
 
-def receive_audio():
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as server_socket:
-        server_socket.bind((HOST, PORT))
+    while len(data) < msg_size:
+        data += client_socket.recv(4 * 1024)
+    frame_data = data[:msg_size]
+    data = data[msg_size:]
+    frame = pickle.loads(frame_data)
+    audio.put(frame)
 
-        print("Server is listening on {}:{}".format(HOST, PORT))
-
-        with sd.OutputStream(channels=channels, samplerate=sample_rate, dtype=dtype) as stream:
-            while True:
-                data, addr = server_socket.recvfrom(1024)  # Adjust buffer size as needed
-                audio_chunk = np.frombuffer(data, dtype=dtype)
-                stream.write(audio_chunk)
-
-
-if __name__ == "__main__":
-    receive_audio()
+client_socket.close()
