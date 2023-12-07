@@ -3,7 +3,7 @@ import socket
 
 
 class Protocol:
-    def __init__(self, sock=socket.socket()):
+    def __init__(self, sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)):
         self.LENGTH_FIELD_SIZE = 10
         self.socket = sock
 
@@ -16,34 +16,45 @@ class Protocol:
     def bind(self, addr: (str, int)):
         return self.socket.bind(addr)
 
-    def listen(self):
-        return self.socket.listen()
+    # def listen(self):
+    #     return self.socket.listen()
 
     def close(self):
         self.socket.close()
 
-    def accept(self):
-        sock, addr = self.socket.accept()
-        return Protocol(sock), addr
+    # def accept(self):
+    #     sock, addr = self.socket.accept()
+    #     return Protocol(sock), addr
+
 
     def recv_all(self, counter) -> bytes:
         msg = b""
-        while len(msg) != counter:
-            res = self.socket.recv(counter - len(msg))
+        chunk = 1024
+        #print(f"length inside = {counter}")
+        while len(msg) < counter:
+            toread = min(chunk, counter - len(msg))
+            res, address_from = self.socket.recvfrom(toread)
             if res == b"":
-                print("recv None")
+                #print("recv None")
                 raise ConnectionError
             msg += res
+            #print(len(msg))
         return msg
 
     def get_msg(self, timeout=None):
 
-        self.socket.settimeout(timeout)
+        #self.socket.settimeout(timeout)
         length = self.recv_all(self.LENGTH_FIELD_SIZE)
         return self.recv_all(int(length))
 
-    def send_msg(self, data: bytes):
+    def send_msg(self, data: bytes, address):
         try:
-            self.socket.sendall(str(len(data)).zfill(self.LENGTH_FIELD_SIZE).encode() + data)
+
+            chunk = 1024
+            self.socket.sendto(str(len(data)).zfill(self.LENGTH_FIELD_SIZE).encode(), address)
+            for dlen in range(0, len(data), chunk):
+                st = dlen
+                end = min(dlen + chunk, len(data))
+                self.socket.sendto(data[st:end], address)
         except Exception:
             raise

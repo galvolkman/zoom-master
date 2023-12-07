@@ -7,9 +7,9 @@ class Server:
     def __init__(self):
         # Create a Protocol object
         self.socket = Protocol()
-        self.socket.bind(("0.0.0.0", 8080))
-        self.socket.listen()
-        self.c_s, _ = self.socket.accept()
+        self.socket.bind(("127.0.0.1", 8080))
+        # self.socket.listen()
+        # self.c_s, _ = self.socket.accept()
 
 
         # Open a connection to the default camera (index 0)
@@ -23,11 +23,12 @@ class Server:
             ret, frame = self.vid.read()
 
             # Serialize the frame using pickle
-            serialized_frame = pickle.dumps(frame)
+            serialized_frame = frame.tobytes()
 
+            address = ("127.0.0.2", 8081)
             # Send the serialized frame
-            self.c_s.send_msg(serialized_frame)
-
+            self.socket.send_msg(serialized_frame, address)
+            data = self.socket.get_msg()
             # Display the frame
             #cv2.imshow('frame', frame)
 
