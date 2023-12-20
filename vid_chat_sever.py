@@ -14,7 +14,7 @@ class Server:
 
         # Open a connection to the default camera (index 0)
         print("a")
-        self.vid = cv2.VideoCapture(0)
+        self.vid = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         print("b")
 
     def run(self):
