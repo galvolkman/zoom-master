@@ -1,45 +1,47 @@
 from protocol import Protocol
 import pickle
 import cv2
-import numpy
 
 
 class Client:
     def __init__(self):
         self.socket = Protocol()
-        self.socket.bind(("127.0.0.2", 8081))
-        # import the opencv library
-
-# define a video capture object
+        self.socket.connect(("127.0.0.1", 8080))
+        self.vid = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
     def run(self):
-        while (True):
-
+        while True:
             # Capture the video frame
-            # by frame
+            ret, frame = self.vid.read()
 
-            data = self.socket.get_msg()
-            frame = numpy.frombuffer(data)
+            # Serialize the frame using pickle
+            serialized_frame = pickle.dumps(frame)
 
-            # Display the resulting frame
-            cv2.imshow('frame', frame)
-            self.socket.send_msg("gotaframe", ("127.0.0.1", 8080))
+            # Send the serialized frame
+            self.socket.send_msg(serialized_frame)
 
-            # the 'q' button is set as the
-            # quitting button you may use any
-            # desired button of your choice
+            # Display the frame
+            # cv2.imshow('frame', frame)
+
+            # Check for the 'q' key to quit
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-        # After the loop release the cap object
+    def relese(self):
+        # Release the video capture object
+        self.vid.release()
 
-        # Destroy all the windows
-        cv2.destroyAllWindows()
+    def close(self):
+
+        # Close the socket
+        self.socket.close()
 
 
 def main():
     cli = Client()
     cli.run()
     cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
     main()

@@ -1,56 +1,72 @@
 import cv2
 import pickle
 from protocol import Protocol  # Assuming you have a custom Protocol class
+import threading
+import numpy as np
+import time
+
+
+class Frame:
+    def __init__(self):
+        self.img = None
+
+    def setImg(self, img):
+        self.img = img
+
+    def getImg(self):
+        return self.img
+
+class ClientReader:
+    def __init__(self, frame: Frame, pro : Protocol):
+        self.frame = frame
+        self.pro = pro
+
+    def run(self):
+
+        while True:
+            img_frame = pickle.loads(self.pro.get_msg())
+            self.frame.setImg(img_frame)
 
 
 class Server:
     def __init__(self):
         # Create a Protocol object
         self.socket = Protocol()
-        self.socket.bind(("127.0.0.1", 8080))
-        # self.socket.listen()
-        # self.c_s, _ = self.socket.accept()
+        self.socket.bind(("0.0.0.0", 8080))
+        self.socket.listen()
+        self.clients = []
+        self.Frames = [Frame(), Frame()]
 
 
-        # Open a connection to the default camera (index 0)
-        print("a")
-        self.vid = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        print("b")
-
-    def run(self):
+    def show_video(self):
+        while (self.Frames[0].getImg() is None) or (self.Frames[1].getImg() is None):
+            pass
         while True:
-            # Capture the video frame
-            ret, frame = self.vid.read()
-
-            # Serialize the frame using pickle
-            serialized_frame = frame.tobytes()
-
-            address = ("127.0.0.2", 8081)
-            # Send the serialized frame
-            self.socket.send_msg(serialized_frame, address)
-            data = self.socket.get_msg()
-            # Display the frame
-            #cv2.imshow('frame', frame)
-
-            # Check for the 'q' key to quit
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-    def relese(self):
-        # Release the video capture object
-        self.vid.release()
-
-    def close(self):
 
 
-        # Close the socket
-        self.c_s.close()
+            # concatenate image Horizontally
+            screen = np.concatenate((self.Frames[0].getImg(), self.Frames[1].getImg()), axis=1)
+            cv2.imshow('screen', screen)
+            time.sleep(0.1)
+
+    def call_run(self):
+        for i in range(2):
+            pro, _ = self.socket.accept()
+            client_reader = ClientReader(self.Frames[i], pro)
+
+            t = threading.Thread(target=client_reader.run)
+            t.start()
+
+
 
 
 def main():
-        ser = Server()
-        ser.run()
-        cv2.destroyAllWindows()
+    ser = Server()
+    ser.call_run()
+    threading.Thread(target=ser.show_video).start()
+
+    #cv2.destroyAllWindows()
+
 
 
 if __name__ == '__main__':
