@@ -17,15 +17,17 @@ class Frame:
         return self.img
 
 class ClientReader:
-    def __init__(self, frame: Frame, pro : Protocol):
+    def __init__(self, frame: Frame, pro : Protocol, whoami: int):
         self.frame = frame
         self.pro = pro
+        self.whoami = whoami
 
     def run(self):
 
         while True:
             img_frame = pickle.loads(self.pro.get_msg())
             self.frame.setImg(img_frame)
+            print(f"updating {self.whoami}")
 
 
 class Server:
@@ -36,6 +38,7 @@ class Server:
         self.socket.listen()
         self.clients = []
         self.Frames = [Frame(), Frame()]
+        self.readers = []
 
 
     def show_video(self):
@@ -50,9 +53,11 @@ class Server:
             time.sleep(0.1)
 
     def call_run(self):
+
         for i in range(2):
             pro, _ = self.socket.accept()
-            client_reader = ClientReader(self.Frames[i], pro)
+            client_reader = ClientReader(self.Frames[i], pro, i)
+            self.readers.append(client_reader)
 
             t = threading.Thread(target=client_reader.run)
             t.start()
