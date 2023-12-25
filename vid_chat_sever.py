@@ -16,6 +16,7 @@ class Frame:
     def getImg(self):
         return self.img
 
+
 class ClientReader:
     def __init__(self, frame: Frame, pro : Protocol, whoami: int):
         self.frame = frame
@@ -27,7 +28,7 @@ class ClientReader:
         while True:
             img_frame = pickle.loads(self.pro.get_msg())
             self.frame.setImg(img_frame)
-            print(f"updating {self.whoami}")
+            # print(f"updating {self.whoami}")
 
 
 class Server:
@@ -37,25 +38,37 @@ class Server:
         self.socket.bind(("0.0.0.0", 8080))
         self.socket.listen()
         self.clients = []
-        self.Frames = [Frame(), Frame()]
+        self.Frames = [Frame(), Frame(), Frame()]
+        # self.Frames = []
         self.readers = []
+
+    def images(self):
+        arr = []
+        for i in self.Frames:
+            arr.append(i.getImg())
+        return arr
 
 
     def show_video(self):
-        while (self.Frames[0].getImg() is None) or (self.Frames[1].getImg() is None):
-            pass
+
         while True:
 
+            if not ((self.Frames[0].getImg() is None) or (self.Frames[1].getImg() is None) or (self.Frames[2].getImg() is None)):
+            # if len(self.Frames) > 1:
 
-            # concatenate image Horizontally
-            screen = np.concatenate((self.Frames[0].getImg(), self.Frames[1].getImg()), axis=1)
-            cv2.imshow('screen', screen)
-            time.sleep(0.1)
+                # concatenate image Horizontally
+
+                screen = np.concatenate((self.images()), axis=1)
+                cv2.imshow('screen', screen)
+                cv2.waitKey(1)
+                time.sleep(0.1)
 
     def call_run(self):
 
-        for i in range(2):
+        for i in range(3):
+
             pro, _ = self.socket.accept()
+            self.Frames.append(Frame())
             client_reader = ClientReader(self.Frames[i], pro, i)
             self.readers.append(client_reader)
 
@@ -67,8 +80,9 @@ class Server:
 
 def main():
     ser = Server()
-    ser.call_run()
     threading.Thread(target=ser.show_video).start()
+    ser.call_run()
+
 
     #cv2.destroyAllWindows()
 
