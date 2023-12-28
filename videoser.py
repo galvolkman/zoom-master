@@ -42,7 +42,7 @@ class Server:
     def __init__(self):
         # Create a Protocol object
         self.socket = Protocol()
-        self.socket.bind(("0.0.0.0", 8080))
+        self.socket.bind(("0.0.0.0", 8081))
         self.socket.listen()
         self.clients = []
         self.Frames = []
